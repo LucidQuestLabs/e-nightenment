@@ -82,34 +82,52 @@
       </section>
 
       <aside class="control-panel" aria-label="Game choices and state">
-        <section class="meters" aria-label="Inner weather">
-          <div class="meter" data-stat="glow">
-            <div class="meter-label">
-              <span>Glow</span>
-              <strong id="glowValue">50</strong>
-            </div>
-            <div class="meter-track"><span id="glowBar"></span></div>
+        <section class="meters is-collapsed" aria-label="Inner weather">
+          <button
+            id="weatherToggle"
+            class="weather-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="weatherDetails"
+          >
+            <span>Inner weather</span>
+            <span id="weatherToggleLabel">Show</span>
+          </button>
+          <div class="weather-summary" aria-label="Condensed inner weather">
+            <span class="weather-chip" data-stat="glow">Glow <strong id="glowChipValue">50</strong></span>
+            <span class="weather-chip" data-stat="hush">Hush <strong id="hushChipValue">50</strong></span>
+            <span class="weather-chip" data-stat="spark">Spark <strong id="sparkChipValue">50</strong></span>
+            <span class="weather-chip" data-stat="shadow">Shadow <strong id="shadowChipValue">50</strong></span>
           </div>
-          <div class="meter" data-stat="hush">
-            <div class="meter-label">
-              <span>Hush</span>
-              <strong id="hushValue">50</strong>
+          <div id="weatherDetails" class="weather-details">
+            <div class="meter" data-stat="glow">
+              <div class="meter-label">
+                <span>Glow</span>
+                <strong id="glowValue">50</strong>
+              </div>
+              <div class="meter-track"><span id="glowBar"></span></div>
             </div>
-            <div class="meter-track"><span id="hushBar"></span></div>
-          </div>
-          <div class="meter" data-stat="spark">
-            <div class="meter-label">
-              <span>Spark</span>
-              <strong id="sparkValue">50</strong>
+            <div class="meter" data-stat="hush">
+              <div class="meter-label">
+                <span>Hush</span>
+                <strong id="hushValue">50</strong>
+              </div>
+              <div class="meter-track"><span id="hushBar"></span></div>
             </div>
-            <div class="meter-track"><span id="sparkBar"></span></div>
-          </div>
-          <div class="meter" data-stat="shadow">
-            <div class="meter-label">
-              <span>Shadow</span>
-              <strong id="shadowValue">50</strong>
+            <div class="meter" data-stat="spark">
+              <div class="meter-label">
+                <span>Spark</span>
+                <strong id="sparkValue">50</strong>
+              </div>
+              <div class="meter-track"><span id="sparkBar"></span></div>
             </div>
-            <div class="meter-track"><span id="shadowBar"></span></div>
+            <div class="meter" data-stat="shadow">
+              <div class="meter-label">
+                <span>Shadow</span>
+                <strong id="shadowValue">50</strong>
+              </div>
+              <div class="meter-track"><span id="shadowBar"></span></div>
+            </div>
           </div>
         </section>
 

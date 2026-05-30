@@ -365,6 +365,9 @@ const dom = {
   resultText: document.querySelector("#resultText"),
   continueButton: document.querySelector("#continueButton"),
   resetButton: document.querySelector("#resetButton"),
+  weatherToggle: document.querySelector("#weatherToggle"),
+  weatherToggleLabel: document.querySelector("#weatherToggleLabel"),
+  meters: document.querySelector(".meters"),
   journalList: document.querySelector("#journalList"),
   endingOverlay: document.querySelector("#endingOverlay"),
   endingTitle: document.querySelector("#endingTitle"),
@@ -383,6 +386,12 @@ const dom = {
     hush: document.querySelector("#hushBar"),
     spark: document.querySelector("#sparkBar"),
     shadow: document.querySelector("#shadowBar")
+  },
+  chips: {
+    glow: document.querySelector("#glowChipValue"),
+    hush: document.querySelector("#hushChipValue"),
+    spark: document.querySelector("#sparkChipValue"),
+    shadow: document.querySelector("#shadowChipValue")
   }
 };
 
@@ -829,6 +838,7 @@ function render() {
     const value = state.stats[key];
     dom.values[key].textContent = value;
     dom.bars[key].style.width = `${value}%`;
+    dom.chips[key].textContent = value;
   }
 
   renderChoices();
@@ -956,6 +966,11 @@ function startRun() {
 dom.continueButton.addEventListener("click", nextNight);
 dom.resetButton.addEventListener("click", startRun);
 dom.endingResetButton.addEventListener("click", startRun);
+dom.weatherToggle.addEventListener("click", () => {
+  const isCollapsed = dom.meters.classList.toggle("is-collapsed");
+  dom.weatherToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  dom.weatherToggleLabel.textContent = isCollapsed ? "Show" : "Hide";
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key >= "1" && event.key <= "3" && state.phase === "choosing") {
