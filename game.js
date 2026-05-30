@@ -394,6 +394,24 @@ let stars = [];
 let particles = [];
 let frame = 0;
 
+const statColors = {
+  glow: "#efb35d",
+  hush: "#60c4a6",
+  spark: "#d66c7a",
+  shadow: "#8d84d8"
+};
+
+const skyPath = [
+  [0.15, 0.25],
+  [0.24, 0.19],
+  [0.33, 0.28],
+  [0.43, 0.22],
+  [0.53, 0.3],
+  [0.62, 0.24],
+  [0.69, 0.28],
+  [0.75, 0.2]
+];
+
 function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
@@ -420,7 +438,9 @@ function createState() {
     deck: shuffle(cards).slice(0, MAX_NIGHTS),
     card: null,
     phase: "choosing",
-    journal: []
+    journal: [],
+    skyMarks: [],
+    lastPulse: null
   };
 }
 
@@ -451,6 +471,25 @@ function scoreRun() {
     spark,
     shadow
   };
+}
+
+function dominantStat(stats = state.stats) {
+  return Object.entries(stats).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function choiceTemperament(delta) {
+  const positive = Object.entries(delta)
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1]);
+  return positive[0]?.[0] || dominantStat();
+}
+
+function colorWithAlpha(hex, alpha) {
+  const value = hex.replace("#", "");
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function resizeCanvas() {
@@ -512,27 +551,7 @@ function drawSky() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, width, height);
 
-  const moonX = width * 0.78;
-  const moonY = height * 0.18;
-  const moonR = Math.max(32, Math.min(width, height) * 0.085);
-  const moonGlow = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonR * 3.6);
-  moonGlow.addColorStop(0, "rgba(245, 239, 224, 0.28)");
-  moonGlow.addColorStop(0.42, "rgba(239, 179, 93, 0.08)");
-  moonGlow.addColorStop(1, "rgba(245, 239, 224, 0)");
-  ctx.fillStyle = moonGlow;
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, moonR * 3.6, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#ead9a5";
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.beginPath();
-  ctx.arc(moonX + moonR * 0.35, moonY - moonR * 0.1, moonR * 0.95, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
+  drawMoon(width, height);
 
   for (const star of stars) {
     const alpha = 0.36 + Math.sin(frame * 0.018 + star.pulse) * 0.18 + glow / 360;
@@ -558,31 +577,117 @@ function drawSky() {
 }
 
 function drawConstellation(width, height) {
-  const points = [
-    [0.18, 0.23],
-    [0.28, 0.18],
-    [0.36, 0.28],
-    [0.48, 0.2],
-    [0.6, 0.3],
-    [0.68, 0.23]
-  ];
-  ctx.strokeStyle = "rgba(96, 196, 166, 0.26)";
+  const points = skyPath.map(([x, y], index) => ({
+    x: x * width,
+    y: y * height + Math.sin(frame * 0.01 + index) * 4
+  }));
+  const litCount = state.skyMarks.length;
+
+  ctx.setLineDash([5, 11]);
+  ctx.strokeStyle = "rgba(245, 239, 224, 0.12)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  points.forEach(([x, y], index) => {
-    const px = x * width;
-    const py = y * height + Math.sin(frame * 0.01 + index) * 4;
-    if (index === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
+  points.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
   });
   ctx.stroke();
+  ctx.setLineDash([]);
 
-  points.forEach(([x, y], index) => {
-    ctx.fillStyle = index < state.glints ? "#efb35d" : "rgba(245, 239, 224, 0.68)";
+  for (let i = 0; i < Math.max(0, litCount - 1); i += 1) {
+    const mark = state.skyMarks[i + 1] || state.skyMarks[i];
+    const color = statColors[mark.temperament] || "#efb35d";
+    const wobble = mark.balance === "Wobbly" ? Math.sin(frame * 0.07 + i) * 2 : 0;
+    ctx.strokeStyle = colorWithAlpha(color, mark.balance === "Lucid" ? 0.74 : 0.52);
+    ctx.lineWidth = mark.balance === "Lucid" ? 2 : 1.35;
+    if (mark.balance === "Weathered") ctx.setLineDash([9, 5]);
+    if (mark.balance === "Wobbly") ctx.setLineDash([4, 7]);
     ctx.beginPath();
-    ctx.arc(x * width, y * height + Math.sin(frame * 0.01 + index) * 4, index < state.glints ? 3.5 : 2.3, 0, Math.PI * 2);
+    ctx.moveTo(points[i].x, points[i].y + wobble);
+    ctx.lineTo(points[i + 1].x, points[i + 1].y - wobble);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  points.forEach((point, index) => {
+    const mark = state.skyMarks[index];
+    const isLit = Boolean(mark);
+    const isNext = index === litCount && state.phase === "choosing";
+    const color = isLit ? statColors[mark.temperament] : "#f5efe0";
+    const pulse = isNext ? Math.sin(frame * 0.06) * 1.1 + 1.2 : 0;
+    const radius = isLit ? 3.2 + Math.min(mark.glintsGained, 3) * 0.7 : 2.1 + pulse;
+    ctx.fillStyle = isLit ? color : "rgba(245, 239, 224, 0.52)";
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
+
+    if (isLit && mark.balance === "Lucid") {
+      ctx.strokeStyle = colorWithAlpha(color, 0.42);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   });
+
+  drawTravelingGlints(points, litCount);
+}
+
+function drawMoon(width, height) {
+  const progress = state.skyMarks.length / MAX_NIGHTS;
+  const moonX = width * 0.78;
+  const moonY = height * 0.18;
+  const moonR = Math.max(32, Math.min(width, height) * 0.085);
+  const temperament = state.lastPulse?.temperament || dominantStat();
+  const color = statColors[temperament] || "#efb35d";
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonR * (3.3 + progress));
+  moonGlow.addColorStop(0, `rgba(245, 239, 224, ${0.22 + progress * 0.1})`);
+  moonGlow.addColorStop(0.42, colorWithAlpha(color, 0.1 + progress * 0.18));
+  moonGlow.addColorStop(1, "rgba(245, 239, 224, 0)");
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR * (3.3 + progress), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ead9a5";
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(moonX + moonR * (0.42 - progress * 0.62), moonY - moonR * 0.1, moonR * (0.96 - progress * 0.08), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+
+  if (state.skyMarks.length === MAX_NIGHTS) {
+    ctx.strokeStyle = colorWithAlpha(color, 0.5);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, moonR + 8 + Math.sin(frame * 0.04) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawTravelingGlints(points, litCount) {
+  if (litCount < 2 || state.glints === 0) return;
+
+  const travelers = Math.min(4, Math.max(1, Math.floor(state.glints / 3)));
+  const maxSegment = litCount - 1;
+  for (let i = 0; i < travelers; i += 1) {
+    const travel = ((frame * 0.006 + i / travelers) % 1) * maxSegment;
+    const segment = Math.min(maxSegment - 1, Math.floor(travel));
+    const t = travel - segment;
+    const from = points[segment];
+    const to = points[segment + 1];
+    const x = from.x + (to.x - from.x) * t;
+    const y = from.y + (to.y - from.y) * t;
+    ctx.fillStyle = i % 2 ? "#60c4a6" : "#efb35d";
+    ctx.globalAlpha = 0.76;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.1 + (i % 2), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawHills(width, height, hush) {
@@ -780,6 +885,7 @@ function choose(index) {
   if (state.phase !== "choosing") return;
 
   const choice = state.card.choices[index];
+  const temperament = choiceTemperament(choice.delta);
   for (const [key, amount] of Object.entries(choice.delta)) {
     state.stats[key] = clamp(state.stats[key] + amount);
   }
@@ -788,6 +894,18 @@ function choose(index) {
   const gained = choice.glints + balanceBonus;
   state.glints += gained;
   state.phase = "resolved";
+  state.lastPulse = {
+    balance: balanceName(),
+    glintsGained: gained,
+    temperament
+  };
+  state.skyMarks.push({
+    balance: state.lastPulse.balance,
+    glintsGained: gained,
+    night: state.night,
+    omen: state.card.title,
+    temperament
+  });
   state.journal.push({
     title: state.card.title,
     note: choice.label.toLowerCase()
