@@ -475,10 +475,11 @@ function makeStars(count) {
 
 function addParticles(amount, color) {
   const rect = dom.canvas.getBoundingClientRect();
+  const focus = getLanternFocus(rect.width, rect.height);
   for (let i = 0; i < amount; i += 1) {
     particles.push({
-      x: rect.width * 0.52 + (Math.random() - 0.5) * 80,
-      y: rect.height * 0.62 + (Math.random() - 0.5) * 52,
+      x: focus.x + (Math.random() - 0.5) * 80,
+      y: focus.y + (Math.random() - 0.5) * 52,
       vx: (Math.random() - 0.5) * 1.8,
       vy: -Math.random() * 1.9 - 0.35,
       life: 70 + Math.random() * 45,
@@ -487,6 +488,13 @@ function addParticles(amount, color) {
       color
     });
   }
+}
+
+function getLanternFocus(width, height) {
+  return {
+    x: width * 0.5,
+    y: height * 0.55
+  };
 }
 
 function drawSky() {
@@ -622,8 +630,7 @@ function drawShadow(width, height, shadow) {
 }
 
 function drawLantern(width, height, glow, spark) {
-  const x = width * 0.52;
-  const y = height * 0.63;
+  const { x, y } = getLanternFocus(width, height);
   const pulse = reduceMotion ? 0 : Math.sin(frame * 0.05) * 4;
   const radius = 90 + glow * 1.6 + pulse;
   const aura = ctx.createRadialGradient(x, y, 0, x, y, radius);
@@ -675,11 +682,12 @@ function roundRect(x, y, width, height, radius) {
 }
 
 function drawGlints(width, height) {
+  const focus = getLanternFocus(width, height);
   for (let i = 0; i < Math.min(state.glints, 16); i += 1) {
     const angle = (i / Math.max(1, state.glints)) * Math.PI * 2 + frame * 0.008;
     const orbit = 58 + (i % 4) * 16;
-    const x = width * 0.52 + Math.cos(angle) * orbit;
-    const y = height * 0.63 + Math.sin(angle) * orbit * 0.45;
+    const x = focus.x + Math.cos(angle) * orbit;
+    const y = focus.y + Math.sin(angle) * orbit * 0.45;
     ctx.fillStyle = i % 2 ? "#60c4a6" : "#efb35d";
     ctx.beginPath();
     ctx.arc(x, y, 2.5 + (i % 3), 0, Math.PI * 2);
